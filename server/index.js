@@ -2,16 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { OpenAI } from 'openai';
-import { 
-  initDb, 
-  createUser, 
-  getUserByEmail, 
-  getUserById, 
-  updateUserProfile, 
-  saveSubmission, 
-  getSubmissions, 
+import {
+  initDb,
+  createUser,
+  getUserByEmail,
+  getUserById,
+  updateUserProfile,
+  saveSubmission,
+  getSubmissions,
   deleteSubmission,
-  hashPassword 
+  hashPassword
 } from './db.js';
 
 dotenv.config();
@@ -58,7 +58,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const userId = await createUser(email, password, name);
     const newUser = await getUserById(userId);
-    
+
     return res.status(201).json({
       message: 'Account registered successfully.',
       token: `session_token_${userId}`,
@@ -718,7 +718,7 @@ app.post('/api/check-eligibility', async (req, res) => {
   if (openai) {
     try {
       console.log(`Sending AI request for ${name} (Income: ${income}, Marks: ${marks}, Cat: ${category})`);
-      
+
       const systemPrompt = `You are a scholarship eligibility assistant for students in Telangana, India. Based on the student's income, marks, and category, return a JSON list of eligible scholarships. 
 Your response MUST be a valid JSON object with a single key "scholarships" containing an array of objects. Each scholarship object MUST contain:
 - name: (The exact name of the scholarship, e.g., TS ePASS Post Matric Scholarship)
@@ -761,7 +761,7 @@ Current Course & Year: ${courseYear}`;
   try {
     // Save to SQLite
     const submissionId = await saveSubmission(name, income, marks, category, courseYear, finalResult, userId);
-    
+
     return res.status(200).json({
       id: submissionId,
       name,
@@ -814,7 +814,7 @@ app.post('/api/advisor/recommendations', async (req, res) => {
     if (openai) {
       try {
         console.log(`Advisor prompting GPT-4o for student ${profile.name}`);
-        
+
         const systemPrompt = `You are an expert AI Scholarship Advisor integrated into the "India College Navigator" platform. 
 Your task is to analyze a student's profile and recommend 3-5 highly relevant scholarships.
 You must strictly format your response to match the application's existing design language and return a valid JSON object containing a 'recommendations' array.
