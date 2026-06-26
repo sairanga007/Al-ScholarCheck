@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, History, Info, GraduationCap, Award, BookOpen, AlertCircle, CheckCircle, LogOut, LayoutDashboard, UserCheck } from 'lucide-react';
+import { 
+  Sparkles, History, GraduationCap, Award, AlertCircle, 
+  CheckCircle, LogOut, LayoutDashboard, UserCheck,
+  Bell, Globe, Layers, Briefcase 
+} from 'lucide-react';
 import StudentForm from './components/StudentForm';
 import ResultsView from './components/ResultsView';
 import HistoryView from './components/HistoryView';
@@ -7,22 +11,41 @@ import LoginView from './components/LoginView';
 import DashboardView from './components/DashboardView';
 import ProfileView from './components/ProfileView';
 
+// Import New Advanced Feature Components
+import CompareView from './components/CompareView';
+import TrackerView from './components/TrackerView';
+import CollegeBundleView from './components/CollegeBundleView';
+import { translations } from './utils/translate';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [lang, setLang] = useState('en');
   
   const [loading, setLoading] = useState(false);
   const [currentResult, setCurrentResult] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifDrop, setShowNotifDrop] = useState(false);
   const [toast, setToast] = useState(null);
   const [submissionToDelete, setSubmissionToDelete] = useState(null);
+
+
+
+  const t = translations[lang] || translations.en;
+
+
 
   // Initialize session state
   useEffect(() => {
     const savedUser = localStorage.getItem('scholarsphere_user');
     const savedToken = localStorage.getItem('scholarsphere_token');
+    const savedLang = localStorage.getItem('scholarsphere_lang');
     
+    if (savedLang) {
+      setLang(savedLang);
+    }
     if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
       setToken(savedToken);
@@ -32,12 +55,28 @@ export default function App() {
     }
   }, []);
 
-  // Fetch history when user logins or changes tabs
+  // Fetch history and notifications when token is available
+  const fetchNotifications = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: { 'Authorization': token }
+      });
+      if (res.ok) {
+        const list = await res.json();
+        setNotifications(list);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchHistory();
+      fetchNotifications();
     }
-  }, [token]);
+  }, [token, activeTab]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -63,6 +102,7 @@ export default function App() {
     setActiveTab('login');
     setCurrentResult(null);
     setSubmissions([]);
+    setNotifications([]);
     showToast('Signed out successfully.');
   };
 
@@ -106,6 +146,7 @@ export default function App() {
         setCurrentResult(data);
         showToast('Eligibility checking completed.');
         fetchHistory();
+        fetchNotifications();
       } else {
         const errData = await res.json();
         showToast(errData.error || 'Check failed', 'error');
@@ -161,6 +202,15 @@ export default function App() {
     setActiveTab('checker');
   };
 
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  let badgesCount = 0;
+  try {
+    badgesCount = JSON.parse(user?.badges_json || '[]').length;
+  } catch (e) {
+    badgesCount = 0;
+  }
+
   // Auth shield
   if (activeTab === 'login' || !user) {
     return (
@@ -197,75 +247,125 @@ export default function App() {
       
       {/* Header */}
       <header className="no-print bg-white border-b border-surface-variant shadow-sm z-40 sticky top-0">
-        <div className="flex items-center px-container-margin h-16 w-full max-w-7xl mx-auto justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="font-headline-md text-headline-md font-bold text-primary tracking-tight">ScholarCheck</h1>
+        <div className="flex items-center px-container-margin h-16 w-full max-w-7xl mx-auto justify-between gap-4">
+          <div className="flex items-center gap-4 shrink-0">
+            <h1 
+              onClick={() => setActiveTab('dashboard')} 
+              className="font-headline-md text-headline-md font-bold text-primary tracking-tight cursor-pointer"
+            >
+              ScholarCheck
+            </h1>
           </div>
 
-          {/* Desktop Navigation Tabs */}
-          <nav className="hidden md:flex gap-8 h-full items-center">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`font-label-md text-label-md flex items-center justify-center h-16 px-1 transition-all duration-200 border-b-2 ${
-                activeTab === 'dashboard'
-                  ? 'text-primary border-primary font-bold'
-                  : 'text-on-surface-variant border-transparent hover:text-primary'
-              }`}
-            >
-              Dashboard
-            </button>
+          {/* Gamification, Language, Notifications & Logout Controls */}
+          <div className="flex items-center gap-3 ml-auto">
+            
+            {/* Language Selector Dropdown */}
+            <div className="flex items-center gap-1 bg-surface-container border border-outline-variant/35 rounded-xl px-2 py-1">
+              <Globe size={14} className="text-outline" />
+              <select
+                value={lang}
+                onChange={(e) => {
+                  setLang(e.target.value);
+                  localStorage.setItem('scholarsphere_lang', e.target.value);
+                  showToast(`Language switched successfully.`);
+                }}
+                className="bg-transparent text-xs font-bold outline-none text-primary cursor-pointer border-none py-0.5"
+              >
+                <option value="en">EN</option>
+                <option value="te">TE</option>
+                <option value="hi">HI</option>
+                <option value="ta">TA</option>
+              </select>
+            </div>
 
-            <button
-              onClick={() => setActiveTab('checker')}
-              className={`font-label-md text-label-md flex items-center justify-center h-16 px-1 transition-all duration-200 border-b-2 ${
-                activeTab === 'checker'
-                  ? 'text-primary border-primary font-bold'
-                  : 'text-on-surface-variant border-transparent hover:text-primary'
-              }`}
-            >
-              Eligibility Form
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveTab('history');
-                fetchHistory();
-              }}
-              className={`font-label-md text-label-md flex items-center justify-center h-16 px-1 transition-all duration-200 border-b-2 ${
-                activeTab === 'history'
-                  ? 'text-primary border-primary font-bold'
-                  : 'text-on-surface-variant border-transparent hover:text-primary'
-              }`}
-            >
-              History
-            </button>
-
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`font-label-md text-label-md flex items-center justify-center h-16 px-1 transition-all duration-200 border-b-2 ${
-                activeTab === 'profile'
-                  ? 'text-primary border-primary font-bold'
-                  : 'text-on-surface-variant border-transparent hover:text-primary'
-              }`}
-            >
-              My Profile
-            </button>
-
-            <span className="h-6 w-px bg-outline-variant" />
+            {/* Notification Bell Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifDrop(!showNotifDrop)}
+                className="p-2 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-primary relative"
+                title="Notifications"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-error text-white font-bold text-[8px] w-4 h-4 rounded-full flex items-center justify-center animate-bounce">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              
+              {showNotifDrop && (
+                <div className="absolute right-0 mt-2.5 w-[290px] sm:w-[320px] bg-white border border-outline-variant/30 rounded-2xl shadow-xl z-50 p-4 space-y-3">
+                  <div className="flex justify-between items-center border-b pb-2 border-outline-variant/10">
+                    <h4 className="font-label-md text-label-md text-primary font-bold">{t.notificationCenter}</h4>
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={async () => {
+                          for (const n of notifications) {
+                            if (!n.is_read) {
+                              await fetch('/api/notifications/read', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ id: n.id })
+                                                  });
+                            }
+                          }
+                          showToast("All read.");
+                          fetchNotifications();
+                          setShowNotifDrop(false);
+                        }}
+                        className="text-[10px] font-bold text-secondary hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {notifications.length === 0 ? (
+                      <p className="text-center text-outline text-xs py-4">No notifications.</p>
+                    ) : (
+                      notifications.slice(0, 4).map((n, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={async () => {
+                            if (!n.is_read) {
+                              await fetch('/api/notifications/read', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ id: n.id })
+                                                  });
+                              fetchNotifications();
+                            }
+                            setShowNotifDrop(false);
+                            setActiveTab('tracker');
+                          }}
+                          className={`p-2.5 rounded-xl border text-xs cursor-pointer hover:bg-surface-container-low transition-all ${
+                            n.is_read ? 'bg-surface-bright border-outline-variant/20 text-on-surface-variant' : 'bg-primary-container/10 border-secondary text-primary font-medium'
+                          }`}
+                        >
+                          <p className="font-bold">{n.title}</p>
+                          <p className="text-[10px] mt-0.5 leading-normal text-on-surface-variant">{n.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      setShowNotifDrop(false);
+                      setActiveTab('tracker');
+                    }}
+                    className="w-full text-center text-xs font-bold text-secondary hover:underline pt-2 border-t border-outline-variant/10 block"
+                  >
+                    View All Tracker
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Logout button */}
             <button
-              onClick={handleLogout}
-              className="p-2 rounded-full bg-surface-container-low hover:bg-surface-container-high transition-colors text-primary"
-              title="Sign Out"
-            >
-              <LogOut size={16} />
-            </button>
-          </nav>
-
-          {/* Desktop profile status or simple logout */}
-          <div className="flex md:hidden items-center gap-2">
-            <button 
               onClick={handleLogout}
               className="p-2 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-primary"
               title="Sign Out"
@@ -276,7 +376,41 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Body */}
+      {/* Horizontal Sub-navigation Bar */}
+      <div className="no-print border-b border-outline-variant/20 bg-white shadow-xs">
+        <div className="max-w-7xl mx-auto px-container-margin py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin">
+          {[
+            { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
+            { id: 'checker', label: t.eligibilityForm, icon: Award },
+            { id: 'compare', label: t.compare, icon: Layers },
+            { id: 'tracker', label: t.tracker, icon: Briefcase },
+            { id: 'bundle', label: t.bundle, icon: GraduationCap },
+            { id: 'history', label: t.history, icon: History },
+            { id: 'profile', label: t.profile, icon: UserCheck }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === 'history') fetchHistory();
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-label-md font-label-md font-bold transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <Icon size={15} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Body Content */}
       <main className="w-full max-w-7xl mx-auto px-container-margin py-section-padding space-y-stack-lg flex-grow">
         
         {/* Dashboard Tab */}
@@ -290,18 +424,43 @@ export default function App() {
           />
         )}
 
+        {/* Compare Tool Tab */}
+        {activeTab === 'compare' && (
+          <CompareView 
+            lang={lang}
+          />
+        )}
+
+        {/* Scholarship Tracker Tab */}
+        {activeTab === 'tracker' && (
+          <TrackerView 
+            token={token} 
+            showToast={showToast} 
+            lang={lang}
+          />
+        )}
+
+        {/* College Bundle Tab */}
+        {activeTab === 'bundle' && (
+          <CollegeBundleView 
+            user={user} 
+            lang={lang}
+          />
+        )}
+
         {/* Checker Tab (Form & Manual Scan) */}
         {activeTab === 'checker' && (
           <div className="space-y-6">
             {currentResult ? (
               <ResultsView 
                 result={currentResult} 
+                user={user}
                 onBack={() => setCurrentResult(null)} 
               />
             ) : (
               <div className="space-y-6">
                 <div className="text-center max-w-2xl mx-auto">
-                  <h2 className="font-display-lg text-display-lg text-primary">Quick Eligibility Check</h2>
+                  <h2 className="font-display-lg text-display-lg text-primary">{t.eligibilityForm}</h2>
                   <p className="font-body-md text-body-md text-on-surface-variant mt-2">
                     Fill in candidate details below to scan eligible scholarship opportunities immediately.
                   </p>
@@ -341,60 +500,6 @@ export default function App() {
           </p>
         </div>
       </footer>
-
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-white border-t border-surface-variant shadow-lg md:hidden">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
-            activeTab === 'dashboard'
-              ? 'bg-primary-container text-on-primary-container'
-              : 'text-on-surface-variant hover:bg-surface-container-low'
-          }`}
-        >
-          <LayoutDashboard size={18} />
-          <span className="font-label-sm text-[10px] mt-0.5 font-semibold">Dashboard</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('checker')}
-          className={`flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
-            activeTab === 'checker'
-              ? 'bg-primary-container text-on-primary-container'
-              : 'text-on-surface-variant hover:bg-surface-container-low'
-          }`}
-        >
-          <Sparkles size={18} />
-          <span className="font-label-sm text-[10px] mt-0.5 font-semibold">Checker</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('history');
-            fetchHistory();
-          }}
-          className={`flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
-            activeTab === 'history'
-              ? 'bg-primary-container text-on-primary-container'
-              : 'text-on-surface-variant hover:bg-surface-container-low'
-          }`}
-        >
-          <History size={18} />
-          <span className="font-label-sm text-[10px] mt-0.5 font-semibold">History</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
-            activeTab === 'profile'
-              ? 'bg-primary-container text-on-primary-container'
-              : 'text-on-surface-variant hover:bg-surface-container-low'
-          }`}
-        >
-          <UserCheck size={18} />
-          <span className="font-label-sm text-[10px] mt-0.5 font-semibold">Profile</span>
-        </button>
-      </nav>
 
       {/* Toast Banner */}
       {toast && (
@@ -440,6 +545,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+
 
     </div>
   );

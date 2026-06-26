@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Sparkles, Award, IndianRupee, BookOpen, UserCheck,
   ArrowRight, ShieldAlert, Calendar, CheckCircle2,
-  AlertCircle, Printer, ArrowLeft, RefreshCw, ExternalLink
+  AlertCircle, Printer, ArrowLeft, RefreshCw, ExternalLink, TrendingUp
 } from 'lucide-react';
 
 const getSafeApplicationLink = (link) => {
@@ -171,7 +171,7 @@ export default function DashboardView({ user, token, showToast, onRefreshHistory
               </div>
             ) : (
               <button
-                onClick={() => onNavigate('checker')}
+                onClick={handleConsultAdvisor}
                 className="bg-primary text-on-primary h-12 px-8 rounded-lg font-label-md text-label-md hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-md"
               >
                 Launch Consultation Check <ArrowRight size={16} />
@@ -250,95 +250,136 @@ export default function DashboardView({ user, token, showToast, onRefreshHistory
 
             {/* Recommendations List Grid */}
             <div className="grid grid-cols-1 gap-6">
-              {recommendations.map((scheme, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col hover:shadow-md transition-shadow relative pt-8 pb-6 px-6 gap-4"
-                >
-                  <div className="h-2 w-full bg-secondary absolute top-0 left-0"></div>
-                  
-                  {/* Row 1: Badges, Name and Provider */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Status Badge */}
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getStatusBadgeStyles(scheme.status)}`}>
-                          {scheme.status}
-                        </span>
-
-                        {/* Type Tags */}
-                        {scheme.type_tags && scheme.type_tags.map((tag, tIdx) => (
-                          <span key={tIdx} className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${getTypeTagStyles(tag)}`}>
-                            {tag}
+              {recommendations.map((scheme, idx) => {
+                const score = scheme.match_score !== undefined ? scheme.match_score : 100;
+                return (
+                  <div
+                    key={idx}
+                    className="bg-white rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col hover:shadow-md transition-shadow relative pt-8 pb-6 px-6 gap-4"
+                  >
+                    <div className={`h-2 w-full absolute top-0 left-0 ${
+                      score >= 90 ? 'bg-secondary' :
+                      score >= 70 ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}></div>
+                    
+                    {/* Row 1: Badges, Name and Provider */}
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Match Score Badge */}
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                            score >= 90 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            score >= 70 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
+                            {score}% Match
                           </span>
-                        ))}
+
+                          {/* Success Chance Badge */}
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                            scheme.success_chance === 'High' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            scheme.success_chance === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
+                            Chances: {scheme.success_chance || 'High'}
+                          </span>
+
+                          {/* Status Badge */}
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getStatusBadgeStyles(scheme.status)}`}>
+                            {scheme.status}
+                          </span>
+
+                          {/* Type Tags */}
+                          {scheme.type_tags && scheme.type_tags.map((tag, tIdx) => (
+                            <span key={tIdx} className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${getTypeTagStyles(tag)}`}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+
+                        <h4 className="font-headline-md text-headline-md text-primary font-bold mt-1 pr-20">
+                          {scheme.name}
+                        </h4>
+                        <p className="font-label-sm text-label-sm text-outline mt-1 font-medium">
+                          Provider: {scheme.provider}
+                        </p>
                       </div>
 
-                      <h4 className="font-headline-md text-headline-md text-primary font-bold mt-1 pr-20">
-                        {scheme.name}
-                      </h4>
-                      <p className="font-label-sm text-label-sm text-outline mt-1 font-medium">
-                        Provider: {scheme.provider}
+                      {/* Financial Breakdown (Right Top) */}
+                      <div className="shrink-0 flex flex-col sm:items-end bg-surface-container border border-outline-variant/40 px-3.5 py-2.5 rounded-lg">
+                        <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Award Amount</span>
+                        <span className="font-display-lg text-display-lg text-primary flex items-center gap-0.5 font-bold">
+                          {(!scheme.award_amount.includes('₹') && !/[a-zA-Z]/.test(scheme.award_amount)) && <IndianRupee size={16} />}
+                          {scheme.award_amount}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Row 2: Stream Fit & Key Eligibility Box */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-container-low p-4 rounded-lg text-body-md border border-outline-variant/10">
+                      <div>
+                        <p className="font-label-sm text-label-sm text-on-surface-variant font-semibold mb-1">Key Eligibility Criteria</p>
+                        <p className="text-on-surface leading-relaxed">{scheme.key_eligibility}</p>
+                      </div>
+                      <div>
+                        <p className="font-label-sm text-label-sm text-on-surface-variant font-semibold mb-1">Stream Compatibility</p>
+                        <p className="text-on-surface leading-relaxed">{scheme.stream_fit}</p>
+                      </div>
+                    </div>
+
+                    {/* Row 3: Justification Highlight */}
+                    <div className="bg-surface-container-low p-4 rounded-lg mt-auto glass-ai border border-white/40">
+                      <p className="font-label-sm text-label-sm text-tertiary uppercase tracking-wider mb-1 flex items-center gap-1 font-bold">
+                        <Sparkles size={14} className="text-tertiary animate-pulse" /> Why you qualify
+                      </p>
+                      <p className="font-body-md text-body-md text-on-surface-variant italic">
+                        "{scheme.justification}"
                       </p>
                     </div>
 
-                    {/* Financial Breakdown (Right Top) */}
-                    <div className="shrink-0 flex flex-col sm:items-end bg-surface-container border border-outline-variant/40 px-3.5 py-2.5 rounded-lg">
-                      <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Award Amount</span>
-                      <span className="font-display-lg text-display-lg text-primary flex items-center gap-0.5 font-bold">
-                        {(!scheme.award_amount.includes('₹') && !/[a-zA-Z]/.test(scheme.award_amount)) && <IndianRupee size={16} />}
-                        {scheme.award_amount}
+                    {/* Row 4: Profile Optimizer Suggestions */}
+                    {scheme.optimizations && scheme.optimizations.length > 0 && (
+                      <div className="bg-surface-container-low p-4 rounded-lg border border-outline-variant/10">
+                        <p className="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 flex items-center gap-1 font-bold">
+                          <TrendingUp size={14} className="text-secondary" /> AI Profile Optimizer Suggestions
+                        </p>
+                        <ul className="space-y-1.5">
+                          {scheme.optimizations.map((opt, oIdx) => (
+                            <li key={oIdx} className="flex items-start gap-2 text-body-md text-on-surface-variant font-medium">
+                              <span className="text-secondary shrink-0 font-bold">✓</span>
+                              <span>{opt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Footer Card Row */}
+                    <div className="pt-3 border-t border-outline-variant/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 font-label-sm text-label-sm text-on-surface-variant">
+                      <span className="font-semibold text-[10px] uppercase tracking-wider text-outline">
+                        India College Navigator Platform
                       </span>
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1 text-primary font-bold">
+                          <Calendar size={13} className="text-secondary" />
+                          Deadline: {scheme.deadline}
+                        </span>
+                        {scheme.application_link && (
+                          <a
+                            href={getSafeApplicationLink(scheme.application_link)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="no-print inline-flex items-center gap-1 text-secondary hover:underline font-bold"
+                          >
+                            Apply Now <ExternalLink size={12} />
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Row 2: Stream Fit & Key Eligibility Box */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-container-low p-4 rounded-lg text-body-md border border-outline-variant/10">
-                    <div>
-                      <p className="font-label-sm text-label-sm text-on-surface-variant font-semibold mb-1">Key Eligibility Criteria</p>
-                      <p className="text-on-surface leading-relaxed">{scheme.key_eligibility}</p>
-                    </div>
-                    <div>
-                      <p className="font-label-sm text-label-sm text-on-surface-variant font-semibold mb-1">Stream Compatibility</p>
-                      <p className="text-on-surface leading-relaxed">{scheme.stream_fit}</p>
-                    </div>
                   </div>
-
-                  {/* Row 3: Justification Highlight */}
-                  <div className="bg-surface-container-low p-4 rounded-lg mt-auto glass-ai border border-white/40">
-                    <p className="font-label-sm text-label-sm text-tertiary uppercase tracking-wider mb-1 flex items-center gap-1 font-bold">
-                      <Sparkles size={14} className="text-tertiary" /> Why you qualify
-                    </p>
-                    <p className="font-body-md text-body-md text-on-surface-variant italic">
-                      "{scheme.justification}"
-                    </p>
-                  </div>
-
-                  {/* Footer Card Row */}
-                  <div className="pt-3 border-t border-outline-variant/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 font-label-sm text-label-sm text-on-surface-variant">
-                    <span className="font-semibold text-[10px] uppercase tracking-wider text-outline">
-                      India College Navigator Platform
-                    </span>
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1 text-primary font-bold">
-                        <Calendar size={13} className="text-secondary" />
-                        Deadline: {scheme.deadline}
-                      </span>
-                      {scheme.application_link && (
-                        <a
-                          href={getSafeApplicationLink(scheme.application_link)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="no-print inline-flex items-center gap-1 text-secondary hover:underline font-bold"
-                        >
-                          Apply Now <ExternalLink size={12} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Printable stamp lines */}
