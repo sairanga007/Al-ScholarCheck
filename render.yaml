@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: scholarcheck-backend
+    env: node
+    plan: free
+    branch: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+    # Optional: If you upgrade to a paid Render plan, you can mount a persistent disk for SQLite
+    # disk:
+    #   name: scholarcheck-data
+    #   mountPath: /data
+    #   sizeGB: 1
